@@ -1,0 +1,441 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Clean and Format Table 1: Maternal Mortality Ratio
+
+## Import data
+
+```{r}
+library(readr) # code wants to use the package 'readr'
+dirty_maternal_mortality <- read_csv("Maternal mortality ratio.csv") # code uses the package 'readr' to read the csv file imported into R and name it dirty
+View(dirty_maternal_mortality) # code views the data set
+```
+
+## Checking the values
+
+```{r}
+str(dirty_maternal_mortality) # code requests the values in the data as well as confirming the column names
+```
+
+## Keeping certain columns and renaming the columns
+
+```{r}
+names(dirty_maternal_mortality) # code checks the column names of dirty
+```
+
+```{r}
+dirty_maternal_mortality <- dirty_maternal_mortality[,c(1,3,6)] # code keeps the 3 columns needs even though their column names may not be correct yet: we want to keep the country, the variable (deaths) and the region.
+```
+
+```{r}
+as.list(dirty_maternal_mortality[1,]) # code helps to notice that when the data was imported, the third column name was shifted between the third and fourth columns and created a shift in data. 
+```
+
+```{r}
+names(dirty_maternal_mortality)[1:3]=c("Country","Mortality Rate","Region") # code renames the columns appropriately
+```
+
+```{r}
+str(dirty_maternal_mortality) # code checks the data types again to make sure we have what we want
+```
+
+## Checking and Cleaning characters within the columns
+
+```{r}
+dirty_maternal_mortality$Country[grepl("[^a-zA-Z]",dirty_maternal_mortality$Country)] # Code requests any cells in the Country column that aren't only upper and lower case letters. Helps to notice that we have spaces, commas, apostrophes, dashes, and parenthases. However, countries with spaces are fine so let's try something else. 
+```
+
+```{r}
+dirty_maternal_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_maternal_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub('-',' ',dirty_maternal_mortality$Country,fixed = T) # code requests all dashes be replaced with spaces
+```
+
+```{r}
+dirty_maternal_mortality$Country=gsub('-',' ',dirty_maternal_mortality$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_maternal_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_maternal_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub(',','',dirty_maternal_mortality$Country,fixed = T) # code requests any commas be removed
+```
+
+```{r}
+dirty_maternal_mortality$Country=gsub(',','',dirty_maternal_mortality$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_maternal_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_maternal_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only two names left that are an issue
+```
+
+```{r}
+gsub("\\(.*\\)",'',dirty_maternal_mortality$Country,perl = T) # code asks anything inside of parenthases to be removed to get rid of (Turkiye)
+```
+
+```{r}
+dirty_maternal_mortality$Country=gsub("\\(.*\\)",'',dirty_maternal_mortality$Country,perl = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_maternal_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_maternal_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only one names left that are an issue but we are going to leave it be
+```
+
+```{r}
+dirty_maternal_mortality$Country == trimws(dirty_maternal_mortality$Country) # code checks to see if there are any leading or trailing spaces
+```
+
+```{r}
+dirty_maternal_mortality$Country <- trimws(dirty_maternal_mortality$Country) # code requests to remove any leading or trailing spaces
+```
+
+```{r}
+dirty_maternal_mortality$Country == trimws(dirty_maternal_mortality$Country) # code checks to see if there are any leading or trailing spaces and everything is good
+```
+
+```{r}
+str(dirty_maternal_mortality) # Code is checking the columns, the mortality rate column is recognized as numerical so that is okay. 
+```
+
+```{r}
+dirty_maternal_mortality$Region == trimws(dirty_maternal_mortality$Region) # code checks to see if there are any leading or trailing spaces in the region column and there are not
+```
+
+## The data has been cleaned. There are no missing values or characters that may be an issue. Let's move on to formatting.
+
+## Check numeric data
+
+```{r}
+summary(dirty_maternal_mortality$`Mortality Rate`) # code is checking the statistical summary of the mortality rate column - we know that it is numerical since it gives us an analysis
+```
+
+```{r}
+str(dirty_maternal_mortality) # code is confirming that it is numerical again
+```
+
+## Check text format
+
+```{r}
+dirty_maternal_mortality$Country=toupper(dirty_maternal_mortality$Country) # code changes all the values in the country column to uppercase
+```
+
+```{r}
+dirty_maternal_mortality$Region=toupper(dirty_maternal_mortality$Region) # code changes all the values in the region column to upper case
+```
+
+## The dirty_mortality file has been cleaned and formatted.
+
+# Saving Files
+
+```{r}
+saveRDS(dirty_maternal_mortality,"Maternal_Mortality_Formatted.RDS") # code is saving the data frame as an RDS file
+```
+
+```{r}
+Maternal_Mortality_FormattedRDS=readRDS("Maternal_Mortality_Formatted.RDS") # code is reading the RDS file
+str(Maternal_Mortality_FormattedRDS) # code is checking the data types in the RDS file
+```
+
+```{r}
+write.csv(dirty_maternal_mortality,"Maternal_Mortality_Formatted.csv", row.names = FALSE) # code is saving the data frame as a csv file
+Maternal_Mortality_FormattedCSV=read.csv("Maternal_Mortality_Formatted.csv") # code is reading the csv file
+str(Maternal_Mortality_FormattedCSV) # code is checking the data types in the csv file
+```
+
+# Clean and Format Table 2: Infant Mortality Ratio
+
+## Import data
+
+```{r}
+library(readr) # code wants to use the package 'readr'
+dirty_mortality <- read_csv("Infant mortality rate.csv") # code uses the package 'readr' to read the csv file imported into R and name it dirty_mortality
+View(dirty_mortality) # code views the data set
+```
+
+## Checking the values
+
+```{r}
+str(dirty_mortality) # code requests the values in the data as well as confirming the column names
+```
+
+## Keeping certain columns and renaming the columns
+
+```{r}
+names(dirty_mortality) # code checks the column names of dirty
+```
+
+```{r}
+dirty_mortality <- dirty_mortality[,c(1,3,6)] # code keeps the 3 columns needs even though their column names may not be correct yet: we want to keep the country, the variable (deaths) and the region.
+```
+
+```{r}
+as.list(dirty_mortality[1,]) # code helps to notice that when the data was imported, the third column name was shifted between the third and fourth columns and created a shift in data. 
+```
+
+```{r}
+names(dirty_mortality)[1:3]=c("Country","Mortality Rate","Region") # code renames the columns appropriately
+```
+
+```{r}
+str(dirty_mortality) # code checks the data types again to make sure we have what we want
+```
+
+## Checking and Cleaning characters within the columns
+
+```{r}
+dirty_mortality$Country[grepl("[^a-zA-Z]", dirty_mortality$Country)] # Code requests any cells in the Country column that aren't only upper and lower case letters. Helps to notice that we have spaces, commas, apostrophes, dashes, and parenthases. However, countries with spaces are fine so let's try something else. 
+```
+
+```{r}
+dirty_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub('-',' ',dirty_mortality$Country,fixed = T) # code requests all dashes be replaced with spaces
+```
+
+```{r}
+dirty_mortality$Country=gsub('-',' ',dirty_mortality$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub(',','',dirty_mortality$Country,fixed = T) # code requests any commas be removed
+```
+
+```{r}
+dirty_mortality$Country=gsub(',','',dirty_mortality$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only two names left that are an issue
+```
+
+```{r}
+gsub("\\(.*\\)",'',dirty_mortality$Country,perl = T) # code asks anything inside of parentheses to be removed to get rid of (Turkiye)
+```
+
+```{r}
+dirty_mortality$Country=gsub("\\(.*\\)",'',dirty_mortality$Country,perl = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_mortality$Country[grepl("[^a-zA-Z\\s]", dirty_mortality$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only one names left that are an issue but we are going to leave it be
+```
+
+```{r}
+dirty_mortality$Country == trimws(dirty_mortality$Country) # code checks to see if there are any leading or trailing spaces
+```
+
+```{r}
+dirty_mortality$Country <- trimws(dirty_mortality$Country) # code requests to remove any leading or trailing spaces
+```
+
+```{r}
+dirty_mortality$Country == trimws(dirty_mortality$Country) # code checks to see if there are any leading or trailing spaces and everything is good
+```
+
+```{r}
+str(dirty_mortality) # Code is checking the columns, the mortality rate column is recognized as numerical so that is okay. 
+```
+
+```{r}
+dirty_mortality$Region == trimws(dirty_mortality$Region) # code checks to see if there are any leading or trailing spaces in the region column and there are not
+```
+
+## The data has been cleaned. There are no missing values or characters that may be an issue. Let's move on to formatting.
+
+## Check numeric data
+
+```{r}
+summary(dirty_mortality$`Mortality Rate`) # code is checking the statistical summary of the mortality rate column - we know that it is numerical since it gives us an analysis
+```
+
+```{r}
+str(dirty_mortality) # code is confirming that it is numerical again
+```
+
+## Check text format
+
+```{r}
+dirty_mortality$Country=toupper(dirty_mortality$Country) # code changes all the values in the country column to uppercase
+```
+
+```{r}
+dirty_mortality$Region=toupper(dirty_mortality$Region) # code changes all the values in the region column to upper case
+```
+
+## The dirty_mortality file has been cleaned and formatted.
+
+# Saving Files
+
+```{r}
+saveRDS(dirty_mortality,"Infant_Mortality_Formatted.RDS") # code is savings the data frame as an RDS file
+```
+
+```{r}
+Infant_Mortality_FormattedRDS=readRDS("Infant_Mortality_Formatted.RDS") # code is reading the RDS file
+str(Infant_Mortality_FormattedRDS) # code is checking the data types in the RDS file
+```
+
+```{r}
+write.csv(dirty_mortality,"Infant_Mortality_Formatted.csv", row.names = FALSE) # code is savings the data frame as a csv file
+Infant_Mortality_FormattedCSV=read.csv("Infant_Mortality_Formatted.csv") # code is reading the csv file
+str(Infant_Mortality_FormattedCSV) # code is checking the data types of the csv file
+```
+
+# Clean and Format Table 3: Life Expectancy at Birth
+
+## Import Data
+
+```{r}
+library(readr)
+dirty_life_expectancy <- read_csv("Life expectancy at birth.csv")
+View(dirty_life_expectancy)
+```
+## Checking the values
+
+```{r}
+str(dirty_life_expectancy) # code requests the values in the data as well as confirming the column names
+```
+
+## Keeping certain columns and renaming the columns
+
+```{r}
+names(dirty_life_expectancy) # code checks the column names of dirty
+```
+
+```{r}
+dirty_life_expectancy <- dirty_life_expectancy[,c(1,3,6)] # code keeps the 3 columns needs even though their column names may not be correct yet: we want to keep the country, the variable (deaths) and the region.
+```
+
+```{r}
+as.list(dirty_life_expectancy[1,]) # code helps to notice that when the data was imported, the third column name was shifted between the third and fourth columns and created a shift in data. 
+```
+
+```{r}
+names(dirty_life_expectancy)[1:3]=c("Country","Life Expectancy","Region") # code renames the columns appropriately
+```
+
+```{r}
+str(dirty_life_expectancy) # code checks the data types again to make sure we have what we want
+```
+
+## Checking and Cleaning characters within the columns
+
+```{r}
+dirty_life_expectancy$Country[grepl("[^a-zA-Z]", dirty_life_expectancy$Country)] # Code requests any cells in the Country column that aren't only upper and lower case letters. Helps to notice that we have spaces, commas, apostrophes, dashes, and parenthases. However, countries with spaces are fine so let's try something else. 
+```
+
+```{r}
+dirty_life_expectancy$Country[grepl("[^a-zA-Z\\s]", dirty_life_expectancy$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub('-',' ',dirty_life_expectancy$Country,fixed = T) # code requests all dashes be replaced with spaces
+```
+
+```{r}
+dirty_life_expectancy$Country=gsub('-',' ',dirty_life_expectancy$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_life_expectancy$Country[grepl("[^a-zA-Z\\s]", dirty_life_expectancy$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces
+```
+
+```{r}
+gsub(',','',dirty_life_expectancy$Country,fixed = T) # code requests any commas be removed
+```
+
+```{r}
+dirty_life_expectancy$Country=gsub(',','',dirty_life_expectancy$Country,fixed = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_life_expectancy$Country[grepl("[^a-zA-Z\\s]", dirty_life_expectancy$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only two names left that are an issue
+```
+
+```{r}
+gsub("\\(.*\\)",'',dirty_life_expectancy$Country,perl = T) # code asks anything inside of parentheses to be removed to get rid of (Turkiye)
+```
+
+```{r}
+dirty_life_expectancy$Country=gsub("\\(.*\\)",'',dirty_life_expectancy$Country,perl = T) # code asks the data frame to update
+```
+
+```{r}
+dirty_life_expectancy$Country[grepl("[^a-zA-Z\\s]", dirty_life_expectancy$Country,perl = T)] # code requests any cell values in the country column that are not upper or lower case letters or spaces. Only one names left that are an issue but we are going to leave it be
+```
+
+```{r}
+dirty_life_expectancy$Country == trimws(dirty_life_expectancy$Country) # code checks to see if there are any leading or trailing spaces
+```
+
+```{r}
+dirty_life_expectancy$Country <- trimws(dirty_life_expectancy$Country) # code requests to remove any leading or trailing spaces
+```
+
+```{r}
+dirty_life_expectancy$Country == trimws(dirty_life_expectancy$Country) # code checks to see if there are any leading or trailing spaces and everything is good
+```
+
+```{r}
+str(dirty_life_expectancy) # Code is checking the columns, the mortality rate column is recognized as numerical so that is okay. 
+```
+
+```{r}
+dirty_life_expectancy$Region == trimws(dirty_life_expectancy$Region) # code checks to see if there are any leading or trailing spaces in the region column and there are not
+```
+
+## The data has been cleaned. There are no missing values or characters that may be an issue. Let's move on to formatting.
+
+## Check numeric data
+
+
+```{r}
+summary(dirty_life_expectancy$`Life Expectancy`) # code is checking the statistical summary of the mortality rate column - we know that it is numerical since it gives us an analysis
+```
+
+```{r}
+str(dirty_life_expectancy) # code is confirming that it is numerical again
+```
+
+## Check text format
+
+```{r}
+dirty_life_expectancy$Country=toupper(dirty_life_expectancy$Country) # code changes all the values in the country column to uppercase
+```
+
+```{r}
+dirty_life_expectancy$Region=toupper(dirty_life_expectancy$Region) # code changes all the values in the region column to upper case
+```
+
+## The dirty_mortality file has been cleaned and formatted.
+
+# Saving Files
+
+```{r}
+saveRDS(dirty_life_expectancy,"Life_Expectancy_Formatted.RDS") # code is saving the file as an RDS file
+```
+
+```{r}
+Life_Expectancy_FormattedRDS=readRDS("Life_Expectancy_Formatted.RDS") # code is reading the RDS file
+str(Life_Expectancy_FormattedRDS) # code is checking the data types of the RDS file
+```
+
+```{r}
+write.csv(dirty_life_expectancy,"Life_Expectancy_Formatted.csv", row.names = FALSE) # code is saving the data frame as a csv file
+Life_Expectancy_FormattedCSV=read.csv("Life_Expectancy_Formatted.csv") # code is reading the csv file
+str(Life_Expectancy_FormattedCSV) # code is checking the data types of the csv file
+```

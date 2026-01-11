@@ -1,0 +1,161 @@
+---
+title: An R Markdown document converted from "Copy_of_Format_dates_R.ipynb"
+output: html_document
+---
+
+
+# FORMATTING - date values
+
+Let me get the data about [Fire 9-1-1  calls  from Seattle](https://dev.socrata.com/foundry/data.seattle.gov/kzjm-xkqj) from Seattle:
+
+```{r}
+library(jsonlite)
+url="https://data.seattle.gov/resource/kzjm-xkqj.json"
+
+# as data frame
+data911web = fromJSON(url)
+
+# names
+names(data911web)
+```
+
+Let's subset:
+
+```{r}
+data911DF=data911web[,c('address','type','datetime','latitude','longitude','incident_number')] # code requests to keep only certain columns
+```
+
+Let's see the head:
+
+```{r}
+head(data911DF) # code requests the first six lines
+```
+
+Let's check the current data types:
+
+```{r}
+str(data911DF) # code requests the data types
+```
+
+### II.1 From strings to dates
+
+As you see, the datetime **is not**  recognized as _date_:
+
+```{r}
+#  is it a string?
+is.character(data911DF$datetime[1]) # code 
+```
+
+The first value *really* look like this:
+
+```{r}
+data911DF$datetime[1]
+```
+
+R has a nice function **as.POSIXct**:
+
+```{r}
+# notice %OS  which will recover milliseconds (not shown)
+str(as.POSIXct(data911DF$datetime, format="%Y-%m-%dT%H:%M:%OS")[1])
+```
+
+Let's make the change:
+
+```{r}
+data911DF$datetime=as.POSIXct(data911DF$datetime, format="%Y-%m-%dT%H:%M:%OS")
+
+# verify types
+str(data911DF)
+```
+
+Once you have this column as a date, you can do something like this:
+
+```{r}
+data911DF$date=format(data911DF$datetime,"%d-%m-%Y")
+data911DF$day=format(data911DF$datetime,"%d")
+data911DF$year=format(data911DF$datetime,"%Y")
+data911DF$month=format(data911DF$datetime,"%B")
+data911DF$weekday=weekdays(data911DF$datetime)
+data911DF$hour=format(data911DF$datetime,"%H")
+
+#
+head(data911DF)
+```
+
+The extraction is very easy. The results are **all** strings:
+
+```{r}
+# verify
+str(data911DF)
+```
+
+Notice that you have not lost the miliseconds. They will not be displayed unless you force it:
+
+```{r}
+# this will be a string again:
+format(data911DF$datetime, "%Y-%m-%d %H:%M:%OS3")[1]  # "%OS3" forces 3 decimal places
+```
+
+Notice now you can compute differences between dates:
+
+```{r}
+# these are some 911 calls
+data911DF[c(1,10,1000),]
+```
+
+```{r}
+
+# then
+
+
+difftime(data911DF$datetime[1],data911DF$datetime[1000], units = "days")#|>as.numeric()
+```
+
+```{r}
+# also
+difftime(data911DF$datetime[1],data911DF$datetime[10], units = "mins")#|>as.numeric()
+```
+
+`difftime` options are “secs”, “mins”, “hours”, “days”, “weeks”.
+
+For years:
+
+```{r}
+as.POSIXlt(data911DF$datetime[1])$year - as.POSIXlt(data911DF$datetime[10])$year
+```
+
+### II.2 The date format
+
+It is good you are aware of the date format language:
+* %Y (4-digit year), %y (2-digit year)
+* %m (2-digit month), %b (short name of month) %B full name of month
+* %d (1-digit month or 2-digit month)
+
+See these examples:
+
+```{r}
+dates=c('20240201','20240102')
+
+as.Date(dates,format='%Y%m%d')
+```
+
+```{r}
+dates=c('2024/12/10','2024/10/12')
+as.Date(dates,format='%Y/%m/%d')
+```
+
+```{r}
+dates=c('12nov2023','11dec2023')
+as.Date(dates,format='%d%b%Y')
+```
+
+```{r}
+dates=c('NOVEMBER122023','DECEMBER112023')
+as.Date(dates,format='%B%d%Y')
+```
+
+```{r}
+dates=c('NOVEMBER 12,2023','DECEMBER 11,2023')
+as.Date(dates,format='%B %d,%Y')
+```
+

@@ -1,0 +1,580 @@
+---
+title: An R Markdown document converted from "Copy_of_BasicCleaning_R.ipynb"
+output: html_document
+---
+
+```{r}
+rm(list = ls()) ## code to reset the environment
+```
+
+# Data Cleaning: recurring coding strategies
+
+Imagine we have this data:
+
+```{r}
+IRdisplay::display_html('<iframe width="700" height="300" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vR-ubcCBaveg-58jcVmbErpO5kZswjFyHN5YlB8tB1a8B4fzU4sqZ08jkOKx4kBz1qtDNkJJWH8vBYF/pubhtml?gid=0&single=true"></iframe>')
+```
+
+And you need to create a cleaner version:
+
+```{r}
+IRdisplay::display_html('<iframe width="700" height="300" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vR-ubcCBaveg-58jcVmbErpO5kZswjFyHN5YlB8tB1a8B4fzU4sqZ08jkOKx4kBz1qtDNkJJWH8vBYF/pubhtml?gid=2024244899&single=true"></iframe>')
+```
+
+The actual cleaning plan starts after exploration, and the  strategies to recover the true value of the cell can be one or several of these:
+
+* **keep** the columns or rows needed
+* **replace** the wrong value for good value.
+* **delete** the wrong value.
+* **extract** the good value.
+* **split** the cell contents
+
+
+**It is also recommended to clean the column names before the cell contents.**
+
+Notice the **column names** have lightblue background,  and the **contents** have a grey background. I have also colored in red the column names that may serve as key columns, the unique identifiers.
+
+
+## 1. Some REGEX
+
+REGEX is **complex**, but let's share some _patterns_ that we will often use.
+
+* This [a-zA-Z] represents any character of the alphabet (based in latin alphabet).
+* This [^a-zA-Z] represents any characters *outside* the alphabet. The [^] means "the opposite" here. You can use for other purposes (see below).
+* This \w is not the same as [a-zA-Z], \w can be equal to [0-9a-zA-Z\s_], that is, it includes numbers, spaces (\s) and underscore (_).
+* Then, \W is the opposite of \w
+* Similarly, \d is equal to [0-9], and \D is the opposite.
+* Some other relevant symbols are:
+  - The dot (**.**), representing any character.
+  - The plus (**+**), here \d+ represents one or more digits.
+  - The asterisk (__*__) here [a-z]* represents zero or more lowercase letters.
+  - The symbols **^** and **\$** are also very relevant. Together the represent a whole string, that is,  ^\d[a-z]$ means the string starts with a digit and ends with a lowercase letter.
+
+  You will need these when exploring and implementing the cleaning.
+
+## 2. The Data Types
+
+Imagine you CAN NOT see all the data. In that case we can use some code.
+
+```{r}
+# the link as CSV
+linkToData="https://docs.google.com/spreadsheets/d/e/2PACX-1vR-ubcCBaveg-58jcVmbErpO5kZswjFyHN5YlB8tB1a8B4fzU4sqZ08jkOKx4kBz1qtDNkJJWH8vBYF/pub?gid=0&single=true&output=csv" # requests the link to the file and data
+```
+
+Read the data:
+
+```{r}
+dirty=read.csv(linkToData) # creates a data frame with the data from the link
+```
+
+I recommend you do this first:
+
+```{r}
+str(dirty) # code requests the values in the data as well as the error for the column names
+```
+
+You should see the column names, but you do not ...because the column names are in the wrong place:
+
+```{r}
+#using 'head'
+head(dirty) # code requests the first six rows of the data frame, helps to show us the misplacement of the column names
+```
+
+Using _head_ and _tail_ is important:
+
+```{r}
+tail(dirty) # code requests the last six rows of the data frame, helps to tell us the empty rows at the bottom
+```
+
+Notice empty cells have not been considered "NA". We could write instead:
+
+```{r}
+dirty=read.csv(linkToData,na.strings = c("")) # code requests the empty values be labeled as NA which will help to clean up values later
+dirty
+```
+
+We are now in a situation when we beliveve we have a better idea of what rows/columns are needed.
+
+# Cleaning Steps
+
+## A. Keeping columns needed
+
+Pay attention to column names:
+- They should be on the top.
+- They should have no spaces anywhere
+- They should have no special characters
+- They should have no start with numeric values
+- They should be readable (short, self-explanatory)
+- When needed, use comments to explain their meaning.
+
+Currently the column names are somewhere they should not:
+
+---
+
+
+```{r}
+#current names:
+names(dirty) # code requests current column names
+```
+
+```{r}
+# They are in the contents
+as.list(dirty[1,]) # code requests a list of the accurate column names by asking for the first row
+```
+
+```{r}
+# renaming
+colnames(dirty) <- as.list(dirty[1, ]) # code requests the columns names to be replaced with the list created above of the correct column names
+
+# remove first row (now it's the header)
+dirty <- dirty[-1, ] # code requests the first row to be removed because they are actually the column names and have been put in the right place
+
+## see new column names
+dirty # code shows the new data frame
+```
+
+This data has columns with no values at all, even the column name is missing, we can use that to our advantage:
+
+```{r}
+names(dirty)[names(dirty)!='NA'] # code asks for the column names that are not missing
+```
+
+```{r}
+# then
+# using index labels
+dirty <-   dirty[, names(dirty)[names(dirty)!='NA']] # code asks to keep only the column names that are not missing like above
+# so
+dirty # code requests an updated data frame
+```
+
+## B. Keeping rows needed on the contents
+
+### B.1 Filtering using index positions
+
+```{r}
+dirty[1:6,] # requests the first through the sixth rows excluding the titles so it shows as different index in the return
+```
+
+```{r}
+head(dirty,-2) # requests the rows other than the last two
+```
+
+### B.2 Filtering using a column with missing values:
+
+```{r}
+dirty[!is.na(dirty$identification2),] # requests everything that's not missing in the column 'identification2'
+```
+
+Let's keep the first option:
+
+```{r}
+dirty= dirty[1:6,] # requests the first through the sixth rows excluding the titles so it shows as different index in the return
+```
+
+## C. Exploring cell contents
+
+Identify which are textual, numerical, or categorical.
+
+```{r}
+str(dirty) # code tells the values in the data again, the error for the column names was fixed but the variables are still not registering correctly
+```
+
+
+
+* Columns **identification1** and **identification2** are *textual*.
+* The columns from **var1** to **var@3** are all *numerical*. But if the type is _chr_ the column has been read as strings.
+* Column **category** is *categorical*. Keep in mind that categorical types will NEVER be recognised as such by default when read from a CSV. They will always be understood as text (_chr_).
+
+The **column names** are always *strings*.
+
+### C.2.1. **Exploring TEXT columns**
+
+When data is textual, you need to explore the cells to verify all the characters are part of the **alphabet**.
+
+
+Let's see how to use R:
+
+```{r}
+# show me the cells that have a character outside the alphabet
+dirty$identification[grepl("[^a-zA-Z]", dirty$identification)] # code requests cells in the column 'identification' that does not have characters within a-z and A-Z: it shows accents on letter, spaces, brackets
+```
+
+United Kingdom is not dirty. But the space is outside the alphabet. What about:
+
+```{r}
+dirty[grepl("\\W", dirty$identification), 'identification'] # Code requests cells in the column 'identification' that have word characters
+```
+
+or...
+
+```{r}
+# this looks ok
+dirty$identification[grep("[^a-zA-Z\\s]",dirty$identification,perl = T)] # code requests cells in the column 'identification' that do not have characters within a-z and A-Z and any spaces.
+```
+
+### C.2.2. **Exploring NUMBERS**
+
+If numbers are recognised as so, there is no cleaning needed. But if not, it means it has been recognised as text, then we use the regex **\d** (and its variations):
+
+```{r}
+dirty$var1[grep("\\D",dirty$var1)] # code requests everything in the column 'var1' that is not from 0-9 which is what the D stands for
+```
+
+```{r}
+dirty[,'var 2'][grep("\\D",dirty$'var 2')] # code requests everything in the column 'var 2' that is not from 0-9
+```
+
+```{r}
+### remember you do not want this:
+dirty[,'var 2'][grep("\\D",dirty$'var 2')] |>as.numeric() # code requests the data as numeric data but since we haven't cleaned it yet, it doesn't do anything for us
+```
+
+Notice I need to use **[  ]** to access the variables with dirty names (space between words, and the **@** special character). That is why you clean the column names first:
+
+```{r}
+dirty[,'var@3'][grep("\\D",dirty$'var@3',perl=T)] # code requests everything in the column 'var@3' that is not from 0-9
+```
+
+There are cells with good values, but other values can not be kept. Use **\D** with care, numbers are complex. So I prefer something like this:
+
+```{r}
+dirty[,'var@3'][grep("[^\\d+\\.*\\d*]", dirty$'var@3', perl=T,invert = F)] # code requests anything in the column 'var@3' that does not have 0-9 and any that do have a decimal or any with mutiple digits
+```
+
+### C.2.3. **Exploring CATEGORICAL columns**
+
+Just prepare a frequency table to see if categories are well defined.
+
+```{r}
+table(dirty$category) # code requests a frequency table of category column
+```
+
+### C.2.4. Exploring Column names
+
+Here, we want to see what is not right.
+
+```{r}
+# names that have characters different than numbers or alphabet
+colnames(dirty)[grepl("[^0-9a-zA-Z]", colnames(dirty))] # code requests column names that are not 0-9 or letters A-Z or a-z
+```
+
+## C. Cleaning
+
+As mentioned, cleaning may mean:
+
+a. Making bad characters disappear.
+
+b. Keeping good characters.
+
+
+Let's start with the _column names_:
+
+### C.1 Cleaning column names
+
+How can you say: if "a space" or a "weird character", disappear? (that is, *replace* by *nothing*)
+
+```{r}
+# option 1
+gsub("\\W",'',names(dirty) , perl=T ) # code requests the column names to be rewritten with only 0-9 or letters A-Z or a-z and spaces
+```
+
+```{r}
+# option 2
+gsub("[^\\w]",'',names(dirty), perl=T ) # code requests the column names to be rewritten with only 0-9 or letters A-Z or a-z and spaces
+```
+
+```{r}
+# # option 3
+gsub("[^0-9a-zA-Z]",'',names(dirty), perl=T ) # code requests the column names to be rewritten with only 0-9 or letters A-Z or a-z and spaces
+```
+
+Choose any and make the change:
+
+```{r}
+names(dirty)=gsub("[^0-9a-zA-Z]",'',names(dirty)) # code requests the column names in the 'dirty' data frame be changed to the rewritten column names above
+dirty # code requests the new data frame
+```
+
+Be preventive about leading and trailing spaces:
+
+```{r}
+colnames(dirty) == trimws(colnames(dirty),whitespace = "[\\h\\v]") # code requests determination if the column names in 'dirty' are equal to those column names when they've been trimmed of leading and trailing spaces. If it's true, then the column names don't have any spaces but if it's false, then they need to be dealt with
+```
+
+The column names were cleaned by **Making bad characters disappear** 🙂
+
+### C.2. Cleaning TEXT columns
+
+Let's check the **identification** column:
+
+```{r}
+dirty$identification[grep("[^a-zA-Z\\s]",dirty$identification,perl = T)] # code requests cells in the column 'identification' that do not have characters within a-z and A-Z and any spaces.
+```
+
+Not all cells have characters that are not in the alphabet;BUT THIS TIME, The **only** problem here is the brackets.
+
+Then:
+
+* Option 1: Whatever inside brackets (including the brackets) has to go!
+
+```{r}
+gsub("\\[.*\\]",'',dirty$identification,perl = T) # since the only problem in the list is the brackets, the code requests everything except the brackets and whatever is inside
+```
+
+* Option 2: Splitting
+
+```{r}
+sapply(strsplit(dirty$identification, split = '[', fixed = TRUE), `[`, 1) # code requests to split the value with brackets and only keep the first part - that does leave a trailing space after Israel though
+```
+
+When you are satisfied, make the change:
+
+```{r}
+dirty$identification <- gsub("\\[.*\\]", "", dirty$identification) # code requests the change in data in the column 'identification' to be changed in the data frame 'dirty'
+dirty # code requests the new data frame
+```
+
+The **splitting** option seems very convenient for **identification2**:
+
+```{r}
+sapply(strsplit(dirty$identification2, split = ',', fixed = TRUE), `[`, 2) # code requests the values in the column 'identification2' to be split after the comma to keep the second part
+```
+
+If this is OK, then:
+
+```{r}
+dirty$identification2 <- sapply(strsplit(dirty$identification2, split = ',', fixed = TRUE), `[`, 2) # code requests the changed data values from above to be changed in the data frame so that 'identification' and 'identification2' are repetitive
+dirty # code requests the new data frame
+```
+
+Be preventive about leading and trailing spaces:
+
+```{r}
+dirty$identification == trimws(dirty$identification) # code requests to check if there are any leading or trailing spaces in the 'identification' column
+```
+
+Check!
+
+```{r}
+dirty$identification # code requests the values in the 'identification' column
+```
+
+Then:
+
+```{r}
+dirty$identification <- trimws(dirty$identification) # code requests to trim the leading and trailing spaces in the values in the 'identification' column
+```
+
+```{r}
+#verifying:
+dirty$identification == trimws(dirty$identification) # code requests to check again if there are any leading or trailing spaces in the 'identification' column
+```
+
+The presence of ortographic symbols might complicate things. What about?
+
+```{r}
+## you may need to install this:
+# install.packages(string)
+```
+
+```{r}
+# load the stringi package
+library(stringi) # code requests the package 'stringi' be installed
+
+# remove accents and special orthographic characters from 'identification'
+stri_trans_general(dirty$identification, "Latin-ASCII") # code requests any special characters or accents be removed from the data values in the column 'identification'
+```
+
+```{r}
+# then
+
+dirty$identification <- stringi::stri_trans_general(dirty$identification, "Latin-ASCII") # code requests the change made above be kept in the data frame 'dirty'
+```
+
+### C.3. Cleaning the CAT column
+
+We had this:
+
+```{r}
+table(dirty$category) # code requests a frequency table of category column
+```
+
+You can conclude that the **a** is wrong, it should be **A**.
+
+```{r}
+#what about:
+gsub('a','A', dirty$category,fixed=T) # code requests changing the data values in the column 'category' from 'a' to 'A'
+```
+
+That changed **Ba** to **BA**!
+
+```{r}
+## maybe
+## ^: start of string
+## $: end  of string
+gsub('^a$','A', dirty$category) # code requests to only change the 'a' that comes at the beginning of a spring to change and not the 'a' that comes at the end of a string
+```
+
+```{r}
+#then
+dirty$category <- gsub("^a$", "A", dirty$category) # code requests the change in the 'category' column be updated on the data frame 'dirty'
+dirty # code requests the new data frame
+```
+
+
+### C.4. Cleaning NUM columns
+
+From the previous exploration, we know some issues in these columns. Let's go step by step:
+
+```{r}
+gsub(',','',dirty$var1) # code requests the data values in the 'var1' column without commas 
+```
+
+Then,
+
+```{r}
+dirty$var1=gsub(',','',dirty$var1) # code requests a change to the 'dirty' data frame that puts in the substituted values from above without commas
+dirty # code requests the new data frame
+```
+
+The **var2** is more complicated.
+
+```{r}
+dirty$var2 # code requests the values within the 'var2' column 
+```
+
+Let me create a NEW variable as a flag:
+
+```{r}
+# save where you have the issue
+dirty$var2_temp=grepl("\\'|k",dirty$var2,fixed=F) # code requests to create a new flag or column to see where the issues are in 'var2' 
+dirty # code requests the new data frame
+```
+
+```{r}
+## now replace
+dirty$var2 <- gsub("'|k|\\s", "", dirty$var2) # code requests to replace the values in the column 'var2' with values excluding 'k', spaces and apostrophes
+dirty # code requests the new data frame
+```
+
+The last value was right. The other ones were simplified (lack '000'). Let's put the '000' back!
+
+```{r}
+# just adding 000 where needed
+ifelse(dirty$var2_temp,paste0(dirty$var2,'000'),dirty$var2) # code requests to fix the values in 'var2' that were not correct by adding 000 to show the thousands values
+```
+
+```{r}
+# then
+dirty$var2=ifelse(dirty$var2_temp,paste0(dirty$var2,'000'),dirty$var2) # code requests to replace the values from above into the 'var2' column
+# and delete this
+dirty$var2_temp=NULL # code requests to delete the column that was  'var2_temp'
+# result so far
+dirty # code requests the new data frame
+```
+
+The **var3** can be solved like this:
+
+```{r}
+dirty['var3']=gsub("\\$|\\s",'',dirty$var3) # code requests to fix the values in 'var3' column to get rid of $ signs and spaces 
+dirty # code requests the new data frame
+```
+
+## D. Coding missing values:
+
+
+Wrong missing values representation should be replaced with care. Do it according to the data type.
+
+Then, let's start with the **categorical** column:
+
+```{r}
+badCats=grep('\\W+',dirty$category,value = T) # code requests to see if any of the values in the category column do not match upper or lowercase A-Z or 0-9 then label the values that do not match as 'badcats'
+badCats # code requests to see the bad categories values
+```
+
+Let's go for the **numerical** cases:
+
+```{r}
+badNums1 <- dirty$var1[!grepl("\\d+.*\\d*", dirty$var1)] # code requests to see if any values in the 'var1' column do not match a number with zero or more digits and to label them 'badNums1'
+badNums1 # code requests to see the bad number values in var1 column
+```
+
+```{r}
+badNums2 <- dirty$var2[!grepl("\\d+.*\\d*", dirty$var2)] # code requests to see if any values in the 'var2' column do not match a number with zero or more digits and to label them 'badNums2'
+badNums2 # code requests to see the bad number values in var2 column
+```
+
+```{r}
+badNums3 <- dirty$var3[!grepl("\\d+.*\\d*", dirty$var3)] # code requests to see if any values in the 'var3' column do not match a number with zero or more digits and to label them 'badNums3'
+badNums3 # code requests to see the bad number values in var3 column
+```
+
+```{r}
+unique(c(badCats, badNums1, badNums2, badNums3)) # code requests all the symbols from 'badcats', 'badnums1', 'badnums2', and 'badnums3' that should be missing values
+```
+
+Or we can create a function:
+
+```{r}
+ detect_WrongNumber <- function(x) {
+  x[!grepl("\\d+.*\\d*", x)]
+  } # function requests to detect all the values that are not a number with 0 or more digits
+
+
+bads <- lapply(dirty[, c("var1", "var2", "var3")], detect_WrongNumber) # code requests to use the function to detect the numbers that are wrong in 'var1', 'var2', and 'var3' columns from the dirty data 
+all_bads <- unique(unlist(bads)) # code requests to create vectors from the list of 'bads' and name it 'all_bads'
+all_bads <- union(all_bads, badCats) # code requests to combine the vectors 'badcats' and 'all_bads'
+all_bads # code requests to see the bad number values in the data
+
+```
+
+Let's recode all the **all_bads** into **NA**:
+
+```{r}
+# Let's recode all the **all_bads** into **NA**:
+dirty[] <- data.frame(lapply(dirty, function(x) replace(x, x %in% all_bads, NA))) # code requests to change 'all_bads' into NA
+```
+
+Are we missing something?
+
+## E. The Resetting of indexes
+
+After many changes, you have this:
+
+```{r}
+dirty # code requests the data set 'dirty'
+```
+
+In general, you want to be sure the row index starts in 'one' and continues with consecutive values. Just do this:
+
+```{r}
+rownames(dirty)=NULL # code requests to make the row names nothing to so it does not show the row of numbers seen above
+print(dirty) # code requests to show the new data frame
+```
+
+```{r}
+dirty # code requests to update the data frame and show it
+```
+
+# SAVING the CLEAN data
+
+```{r}
+write.csv(dirty,"nowClean.csv") # code requests to 
+```
+
+```{r}
+nowClean=dirty[,] # code requests to create a copy of 'dirty' and name it 'nowClean'
+
+
+folder <- "dataCleaned" # code requests to create a folder called 'dataCleaned'
+
+# Check if the folder exists
+if (!dir.exists(folder)) { # code requests to see if the folder exists
+  # Create the folder
+  dir.create(folder)
+  write.csv(nowClean,file.path(folder,"nowClean.csv")) # code requests to create the folder if it doesn't exist. Then it requests to create a file path called 'nowClean.csv' and save it to that folder
+ 
+} else {
+  write.csv(nowClean,file.path(folder,"nowClean.csv"))} # code requests that if the folder already exists, then to create a file path called 'nowClean.csv' and save it to the existing folder
+```
+

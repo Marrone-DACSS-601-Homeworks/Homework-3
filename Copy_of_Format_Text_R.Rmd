@@ -1,0 +1,120 @@
+---
+title: An R Markdown document converted from "Copy_of_Format_Text_R.ipynb"
+output: html_document
+---
+
+# Data Formatting in R: Text and Categories
+
+Let's scrape this [table](https://en.wikipedia.org/wiki/List_of_freedom_indices) from wikipedia, which is informing of several country indices:
+
+```{r}
+# install.packages("rvest")
+library(rvest)
+
+# Specify the URL of the Wikipedia page
+url <- "https://en.wikipedia.org/wiki/List_of_freedom_indices"
+
+# Read the HTML content of the page
+page <- read_html(url)
+
+# Extract all tables from the page
+freedomDFs <- html_table(page, fill = TRUE)
+
+# To see how many tables were found:
+length(freedomDFs)
+```
+
+**rvest::html_table()** returned 5 dataframes.
+
+Let's keep the _second_ one:
+
+```{r}
+
+freedom=freedomDFs[[2]]
+head(freedom)
+```
+
+For this tutorial, we will only keep some columns:
+
+```{r}
+freedom=freedom[,c(1,4,6,8)]
+head(freedom)
+```
+
+```{r}
+colnames(freedom)
+```
+## I. Formating Text
+
+### I.1 Column names
+
+Formatting column deals with *case*, and *simplicity* of the names.
+
+First, get **cleaner** columns:
+
+```{r}
+# clean columns
+
+# bye \\[.+\\]: brackets and contents
+# bye \\d{4}: numbers of 4 digits
+names(freedom)=trimws(gsub('\\[.+\\]|\\d{4}','',names(freedom)))
+names(freedom)
+```
+
+The columns are almost clean. Notice I have not replaced the spaces. In general, cleaning includes getting rid of spaces, but we will **need** the spaces to explore some formatting options.
+
+Option 1: **drop/replace spaces, format case**
+
+We decide the case, and replace the spaces:
+
+```{r}
+tolower(gsub('\\s','_',names(freedom)))
+```
+
+```{r}
+toupper(gsub('\\s','_',names(freedom)))
+```
+
+Option 2: **Acronyms**
+
+This might be a good idea, but you need to inform the meaning of the column names clearly in the documentation.
+
+```{r}
+abbreviate(names(freedom)[-1],minlength=1,named = F)
+```
+
+option 3: **Some shorter text**
+
+This may not be easy, you can simply do it manually, but in this case I found a way to do it via coding:
+
+```{r}
+tolower(gsub('Index|Freedom|of|\\s','',names(freedom)))
+```
+
+Let's keep the last one (option 3).
+
+```{r}
+names(freedom)=tolower(gsub('Index|Freedom|of|\\s','',names(freedom)))
+head(freedom)
+```
+
+### I.2 Identifier column
+
+The identifier colum is generally a string. We have one column that identifies the rows.
+
+The column should be clean by now:
+
+```{r}
+# not totally clean...
+freedom$country[grep('[^A-Za-z\\s]',freedom$country,perl = T)]
+```
+
+You may need to clean those symbols as we did on the ***Cleaning*** session. Let's skip that, and format the identifier as upper case (you could use other option from above):
+
+```{r}
+freedom$country=toupper(freedom$country)
+head(freedom)
+```
+
+It is recommended you have or lower or upper case only. This will be useful later during the merging stage.
+

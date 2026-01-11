@@ -1,0 +1,231 @@
+---
+title: An R Markdown document converted from "Copy_of_Format_Categorical_R.ipynb"
+output: html_document
+---
+
+# Formatting Categories
+
+Let's use the data from previous notebook:
+
+```{r}
+# install.packages("rvest")
+library(rvest)
+
+# Specify the URL of the Wikipedia page
+url <- "https://en.wikipedia.org/wiki/List_of_freedom_indices"
+
+# Read the HTML content of the page
+page <- read_html(url)
+
+# Extract all tables from the page
+freedomDFs <- html_table(page, fill = TRUE)
+
+# keeping this one:
+freedom=freedomDFs[[2]]
+
+# subsetting
+freedom=freedom[,c(1,4,6,8)]
+
+# clean columns
+names(freedom)=trimws(gsub('\\[.+\\]|\\d{4}','',names(freedom)))
+
+# simpler column names
+names(freedom)=tolower(gsub('Index|Freedom|of|\\s','',names(freedom)))
+
+# formar identifier column
+freedom$country=toupper(freedom$country)
+
+# currently:
+freedom
+```
+
+## II. Formatting the categories
+
+
+Categorical data is represented via strings or integer values. However, the lack most numerical properties. You should be careful in advanced applications on this difference.
+
+For now, let's just convert strings into categorical data type. Let me get the column names we will work on:
+
+```{r}
+catCols=names(freedom)[-1] # code requests the column categories other than the first column
+catCols
+```
+
+Let's see the categories per column:
+
+```{r}
+
+sapply(freedom[,catCols],unique) # code requests each unique value in the specific columns
+```
+
+Notice the mistyping in *economic*: '4 mostly unfree' and '5 mostly unfree'. Also integes are assigned in the inverse order. Also, the missing values are in a wrong format.
+
+Let's do cleaning before formatting:
+
+```{r}
+# recode missing values
+freedom[,catCols] =   lapply(freedom[,catCols], function(x) {
+                                                  x[x == 'n/a'] <- NA
+                                                  return(x)}
+                             )
+
+# get rid of integers in the labels
+freedom[,catCols]=lapply(freedom[,catCols],function(x) trimws(gsub('\\d','',x)))
+```
+
+Let's check:
+
+```{r}
+sapply(freedom[,catCols],unique)
+```
+
+We know the categories. Now, we have to evaluate if you need to: (i) turn them into nominal; (ii) turn them into ordinal.
+
+### II.1 The nominal case
+
+Nominal categories need not much changes (unless they are not clean), we just change the data type:
+
+```{r}
+freedom[,catCols]=  lapply(freedom[,catCols],as.factor)
+head(freedom)
+```
+
+You see no difference, but the data types have changed:
+
+```{r}
+str(freedom)
+```
+
+Now, you can use some categorical or **factor** operations:
+
+```{r}
+levels(freedom$economic)
+```
+
+But, all these variables are **NOT** nominal, they ARE ordinal.
+
+### II.2  The ordinal case
+
+#### III.2.1 Step1: Recoding strings into  'integers'
+
+The original categories **DO** have order. So our first step would be to create a numerical version (using integers).
+
+Notice we are using the same *min* and *max* for all of them, even if they do not have the same amount of categories:
+
+```{r}
+# using 'dplyr'
+freedom$economic_int=dplyr::case_match(freedom$economic,
+                               'repressed'~1, 'mostly unfree'~2,'moderately free'~3, 'mostly free'~4, 'free'~5)
+freedom$press_int=dplyr::case_match(freedom$press,
+                              'very serious'~1, 'difficult'~2,'problematic'~3,'satisfactory'~4,'good'~5)
+freedom$democracy_int=dplyr::case_match(freedom$democracy,
+                             'authoritarian'~1,'hybrid regime'~2,'flawed democracy'~4, 'full democracy'~5)
+```
+
+Notice R gives you new columns, but as numeric integers:
+
+```{r}
+str(freedom)
+```
+
+It looks as expected:
+
+```{r}
+head(freedom)
+```
+
+The integers ARE ordered (they are numbers), but are not in ORDINAL data type:
+
+```{r}
+is.ordered(freedom$democracy_int)
+```
+
+#### III.2. Step 2: Change integers into ordered levels
+
+```{r}
+# 'intCols' is just a the column names
+intCols=grep('int',names(freedom),value=T)
+head(freedom[,intCols])
+```
+
+```{r}
+# new column names
+newColumnsForLevels=gsub('_int',"_level",intCols)
+newColumnsForLevels
+```
+
+```{r}
+# names with labels instead of levels
+ordinalLevels=c('1_veryLow','2_low','3_medium','4_good','5_veryGood')
+```
+
+```{r}
+theInts=seq(1,5) # current values
+renameLevels= function(col) factor(col,
+                                   levels = theInts,
+                                   labels = ordinalLevels,
+                                   ordered = TRUE)
+```
+
+Finally, apply function:
+
+```{r}
+# create several columns as ordinal
+
+freedom[newColumnsForLevels]=lapply(freedom[intCols],renameLevels)
+freedom[intCols]=lapply(freedom[intCols],as.numeric)
+
+
+# The current result:
+str(freedom)
+```
+
+```{r}
+## see
+
+head(freedom)
+```
+
+## III.  Reordering columns (optional)
+
+We could reorganise the columns this way (if needed):
+
+```{r}
+# notice
+sort(names(freedom)[-1])
+```
+
+```{r}
+# then
+freedom=freedom[,c('country',sort(names(freedom)[-1]))]
+# see
+head(freedom)
+```
+
+```{r}
+str(freedom)
+```
+
+### Saving
+
+You should save the formatted data in a way that all those key changes are preserved. Do not use CSV in this stage.
+
+```{r}
+saveRDS(freedom,"freedom_formatted1.RDS")
+```
+
+verify it is working well:
+
+```{r}
+freedomRDS=readRDS("freedom_formatted1.RDS")
+str(freedomRDS)
+```
+
+You may save now a csv, and compare:
+
+```{r}
+write.csv(freedom,"freedom_formatted2.csv", row.names=FALSE)
+freedomCSV=read.csv("freedom_formatted2.csv")
+str(freedomCSV)
+```
+

@@ -1,0 +1,101 @@
+---
+title: An R Markdown document converted from "Copy_of_Format_numeric_R.ipynb"
+output: html_document
+---
+
+
+# FORMATTING - numeric values
+
+
+
+Let me ***scrape*** this [table](https://www.cia.gov/the-world-factbook/field/real-gdp-purchasing-power-parity/country-comparison/) from the CIA World Fact Book.
+
+```{r}
+# read data from website
+linkCiaPurchPower='https://www.cia.gov/the-world-factbook/field/real-gdp-purchasing-power-parity/country-comparison/' # code requests to retrieve the data from this link and name it 'linkCiaPurchPower'
+
+library(rvest) # code requests to use the package 'rvest' from the package library
+
+# get tables from website
+ciapupow = read_html(linkCiaPurchPower)%>%html_table()%>%.[[1]] #get first table, there is only one # code requests to read the data from the link and retrieve the first table
+
+# see table scraped
+head(ciapupow) 
+```
+
+```{r}
+
+library(readr) # code requests to use the package 'readr' for the data file
+
+ciapupow <- read_csv("Real GDP (purchasing power parity).csv") # code requests to read the file and name it 'ciapupow'
+
+head(ciapupow) # I was getting an error above (Error in open.connection(x, "rb") : cannot open the connection) so I used this code to import the data from the website. This code requests to see the scraped file named 'ciapupow'
+```
+
+The data needs cleaning before formatting. Review previous contents and do the cleaning.
+
+ ### I.1 Cleaning before formatting
+
+You see currency symbols and commas above, then you know R has not identified the 3rd column as numerical.
+
+The first step is to know if only '**$**' and '**,**' are present beside numbers:
+
+```{r}
+# replace any digit by 'nothing' ('')
+# and show unique values
+
+# function
+byeDigits=function(x) gsub('\\d','',x) # code requests a function to replace any digits with a space
+# check
+unique(apply(ciapupow[,c(3)],1,FUN = byeDigits)) # code requests to use the function in column 3 and confirm that there are values to be cleaned because we see that there are dollar signs and commas
+```
+
+We have confirmed that the column will need a simple cleaning by replacing values. Let me first change that column name:
+
+```{r}
+names(ciapupow)[3]='RealGDP' # code requests to rename column 3 to 'RealGDP'
+```
+
+Let's create a function to clean by replacing and getting rid of leading and trailing spaces:
+
+```{r}
+keepDigits=function(x) gsub('\\D','',trimws(x)) # code requests to create a function that trims values to only numbers 0-9
+
+ciapupow[,c(3)]=  apply(ciapupow[,c(3)],1,FUN = keepDigits) # code requests to apply the function to column 3 
+
+# Notice 'RealGDP' is still character type
+str(ciapupow) # code requests the data types to see if it fixed column 3
+```
+
+```{r}
+ciapupow # code requests the data frame
+```
+
+While *RealGDP* is clean, you do not have the right format:
+
+```{r}
+summary(ciapupow$RealGDP) # code requests the summary of the third column but since it's still a chr, it doesn't give us what we want
+```
+
+
+### I.2 Formatting number using **as_numeric**:
+
+This is the function that will solve our problem.
+
+You can only apply this function when you are sure your numeric column is clean.
+
+Let's see:
+
+```{r}
+ciapupow$RealGDP=as.numeric(ciapupow$RealGDP) # code requests the column by changed to a numeric value
+
+#Notice 'RealGDP' is numeric now
+str(ciapupow) # code checks the data types
+```
+
+```{r}
+summary(ciapupow$RealGDP) # code requests a summary
+``` 
+
+If the cell isn’t clean, R will coerce the value to NA. Explicitly handling missing values during cleaning is preferable to relying on automatic coercion
+
